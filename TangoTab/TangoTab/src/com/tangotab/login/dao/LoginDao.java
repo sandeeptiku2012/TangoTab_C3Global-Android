@@ -1,0 +1,239 @@
+package com.tangotab.login.dao;
+
+import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.List;
+
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.conn.ConnectTimeoutException;
+import org.json.JSONException;
+import org.json.JSONObject;
+import org.xml.sax.InputSource;
+import org.xml.sax.SAXException;
+
+import android.util.Log;
+
+import com.tangotab.core.connectionManager.ConnectionManager;
+import com.tangotab.core.constant.AppConstant;
+import com.tangotab.core.dao.TangoTabBaseDao;
+import com.tangotab.core.ex.TangoTabException;
+import com.tangotab.core.utils.RestServiceUtil;
+import com.tangotab.core.utils.ValidationUtil;
+import com.tangotab.core.vo.DeviceResponse;
+import com.tangotab.login.vo.LoginVo;
+import com.tangotab.login.xmlHandler.ForgetPasswordHandler;
+import com.tangotab.login.xmlHandler.UserValidationXmlHandler;
+import com.tangotab.signUp.vo.UserVo;
+/**
+ * This Class will check the authentication for user
+ * 
+ * @author dillip.lenka
+ *
+ */
+public class LoginDao extends TangoTabBaseDao
+{
+	public static List<UserVo> userVoList = null;
+
+	/**
+	 * This method will check the authentication for login
+	 * 
+	 * @param loginUrl
+	 * @return
+	 */
+	public String doLogin(LoginVo loginVo) throws ConnectTimeoutException,TangoTabException
+	{
+		Log.v("Invoking the method doSignIn() with url is ", loginVo.toString());
+		String message = null;		
+		String loginUrl = getLoginUrl(loginVo);
+		Log.v("loginUrl is ", loginUrl);
+		if(!ValidationUtil.isNullOrEmpty(loginUrl))
+		{
+			TangoTabBaseDao instance = TangoTabBaseDao.getInstance();
+			ConnectionManager cManager = instance.getConManger();
+			UserValidationXmlHandler userHandler = new UserValidationXmlHandler();
+			instance.getXmlReader().setContentHandler(userHandler);
+			cManager.setupHttpGet(loginUrl);
+			Log.v("Login url is ", loginUrl);			
+			try {
+				InputSource m_is = cManager.makeGetRequestGetResponse();
+				if (m_is != null) {
+					Log.v("response", "" + m_is);
+					instance.getXmlReader().parse(m_is);
+					message = userHandler.getMessage();
+					Log.v("message is ", message);
+					if (ValidationUtil.isNullOrEmpty(message)){
+						userVoList = userHandler.getUserDetailsList();
+					}
+				}
+			}
+			catch (ConnectTimeoutException e)
+			{
+				Log.e("ConnectTimeoutException :", "ConnectTimeoutException occured in login service respone ", e);
+				throw new ConnectTimeoutException(e.getLocalizedMessage());
+			}
+			catch (IOException e)
+			{
+				Log.e("Exception :", "IOException occured in login service respone ", e);
+				throw new TangoTabException("LoginDao", "doSignIn", e);
+			}
+			catch (SAXException e)
+			{
+				Log.e("Exception :", "IOException occured in login service respone ", e);
+				throw new TangoTabException("LoginDao", "doSignIn", e);
+			}
+		}
+		return message;
+	}
+	
+	/**
+	 * This method will check the authentication for login
+	 * 
+	 * @param loginUrl
+	 * @return
+	 */
+	public String forgetPassword(LoginVo loginVo) throws TangoTabException
+	{
+		Log.v("Invoking forgetPassword() method :", "forgetPassUrl =" + loginVo.toString());
+		String message =null;		
+		try {
+			String forgetPassUrl = getForgetPasswordUrl(loginVo);
+			Log.v("forgetPassUrl is ", forgetPassUrl);
+			TangoTabBaseDao instance = TangoTabBaseDao.getInstance();
+			ConnectionManager cManager = instance.getConManger();	
+			ForgetPasswordHandler xHandler = new ForgetPasswordHandler();
+			instance.getXmlReader().setContentHandler(xHandler);
+			cManager.setupHttpGet(forgetPassUrl);
+			InputSource m_is = cManager.makeGetRequestGetResponse();
+			
+			if(m_is!=null)
+			{
+				instance.getXmlReader().parse(m_is);
+				message = xHandler.getForgetMessage();	
+				Log.v("Response message is ", message);
+			}
+		}catch (IOException e)
+		{	
+			Log.e("Exception :", "IOException occured in forget service respone ", e);
+			throw new TangoTabException("LoginDao", "forgetPassword", e);
+		}
+		catch (SAXException e)
+		{
+			Log.e("Exception :", "SAXException occured in forget service respone ", e);
+			throw new TangoTabException("LoginDao", "forgetPassword", e);
+		}		
+		return message;
+		
+	}
+	
+	public DeviceResponse getDeviceResponse(String deviceId) throws TangoTabException
+	{
+				
+		try
+		{
+			String deviceUrl = getDeviceUrl(deviceId) ;
+			HttpGet get = new HttpGet(deviceUrl);
+			get.setHeader("Content-Type", "application/json");
+			get.setHeader("Accept", "application/json;fields=data+counts");			
+			RestServiceUtil restAPI = new RestServiceUtil();
+			String searchResponse = restAPI.executeHTTPGet(get);	
+			DeviceResponse deviceRespons = getParseResponse(searchResponse);	
+			return deviceRespons;
+		} 
+		catch (Exception e) {
+			Log.e(this.getClass().getCanonicalName(), "Failed Invoking Device details URL " , e);
+			throw new TangoTabException("LoginDao", "getDeviceResponse", e);
+		}
+	}
+	/**
+	 * This method will generate the url for login
+	 * 
+	 * @param loginVo
+	 * @return
+	 */
+	private String getLoginUrl(LoginVo loginVo)
+	{
+		String loginUrl =null;
+		if(!ValidationUtil.isNull(loginVo))
+		{
+			if(loginVo.getUserId().equalsIgnoreCase("mischetu@gmail.com") ||
+					loginVo.getUserId().equalsIgnoreCase("test1@tangotab.com")||
+					loginVo.getUserId().equalsIgnoreCase("test2@tangotab.com")||
+					loginVo.getUserId().equalsIgnoreCase("test3@tangotab.com")||
+					loginVo.getUserId().equalsIgnoreCase("test4@tangotab.com")||
+					loginVo.getUserId().equalsIgnoreCase("test5@tangotab.com"))
+			{
+				AppConstant.baseUrl=AppConstant.stageServer;
+			}
+			else{
+				AppConstant.baseUrl=AppConstant.productionServer;
+			}
+			if(!ValidationUtil.isNullOrEmpty(loginVo.getUserId()) && !ValidationUtil.isNullOrEmpty(loginVo.getPassword()))
+				loginUrl =AppConstant.baseUrl + '/' + "uservalidation?emailId=" + TangoTabBaseDao.encodeURI(loginVo.getUserId()) + "&password=" + loginVo.getPassword()+ "&phone_uid=" + TangoTabBaseDao.encodeURI(loginVo.getPhoneId())+ "&os_id=" + TangoTabBaseDao.encodeURI(loginVo.getOsId())+ "&tt_app_id=" + TangoTabBaseDao.encodeURI(loginVo.getTtAppId())+ "&network_id=" + TangoTabBaseDao.encodeURI(loginVo.getNetworkId());
+			//+ "&phone_uid=" + loginVo.getPhoneUId();//&phone_id=12345&os_id=12345&tt_app_id=1.7&network_id=1&phone_uid=1
+		}
+		return loginUrl;
+	}
+	/**
+	 * This method will generate the url for login
+	 * 
+	 * @param loginVo
+	 * @return
+	 */
+	private String getForgetPasswordUrl(LoginVo loginVo)
+	{
+		String forgetPassUrl =null;
+		if(!ValidationUtil.isNull(loginVo))
+		{
+			if(!ValidationUtil.isNullOrEmpty(loginVo.getUserId()))
+				forgetPassUrl = AppConstant.baseUrl+"/forgotpassword/checkuser?emailId="+loginVo.getUserId();
+		}
+		return forgetPassUrl;
+	}
+	
+	/**
+	 * This method will generate the url for login
+	 * 
+	 * @param loginVo
+	 * @return
+	 */
+	private String getDeviceUrl(String deviceId)
+	{
+		String deviceUrl =null;
+		if(!ValidationUtil.isNull(deviceId))
+		{
+			Date currentDate = Calendar.getInstance().getTime();
+			int hour = currentDate.getHours();
+			int mins = currentDate.getMinutes();			
+			String current = new SimpleDateFormat("yyyy-MM-dd").format(currentDate);			
+			deviceUrl = "http://appmonitor.aws.af.cm/tangotab/appcheck/?DeviceID="+deviceId+"&DeviceDate="+current+"&DeviceTime="+hour+":"+mins+"&GeoLoc="+"33.028768"+","+"-96.699583";
+		}
+		return deviceUrl;
+	}
+	
+	private DeviceResponse getParseResponse(String  deviceRes) throws JSONException{
+		DeviceResponse deviceResponse = new DeviceResponse();
+		System.out.println("---deviceResponse---" + deviceResponse);	
+		
+		JSONObject jsonObject = new JSONObject(deviceRes);
+		if(jsonObject.has("responseCode") && !ValidationUtil.isNullOrEmpty(jsonObject.getString("responseCode")))
+			deviceResponse.setResponsCode(jsonObject.getString("responseCode").trim());
+		if(jsonObject.has("responseMessage") && !ValidationUtil.isNullOrEmpty(jsonObject.getString("responseMessage")))
+			deviceResponse.setResponseMssg(jsonObject.getString("responseMessage").trim());
+		
+		
+		if (jsonObject.has("responseDetails")) 
+		{
+			JSONObject response = jsonObject.getJSONObject("responseDetails");				
+			if(response.has("ApplicationStatus"))
+				deviceResponse.setAppStatus(response.getString("ApplicationStatus").trim());
+			if(response.has("TTL"))
+			deviceResponse.settTL(response.getString("TTL").trim());
+			
+		}
+		
+		return deviceResponse;
+	}
+		
+	}

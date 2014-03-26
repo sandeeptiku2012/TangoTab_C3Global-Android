@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    android:orientation="vertical" >
+
+    <include
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        layout="@layout/item_composer_header" />
+
+    <LinearLayout
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/listitemselector"
+        android:padding="6dp" 
+      android:gravity="center|left"
+     >
+      
+        
+        <ImageView
+            android:id="@+id/lYear"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" 
+             android:layout_marginLeft="20dp"
+            android:src="@drawable/ic_launcher"/>
+
+        <TextView
+            android:id="@+id/lName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Full Name"
+            android:textColor="@android:color/white"
+            android:textStyle="bold" 
+            android:layout_marginLeft="15dp"/>
+
+    </LinearLayout>
+
+</LinearLayout>
